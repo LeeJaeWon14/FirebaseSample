@@ -3,58 +3,58 @@ package com.example.firebasesample
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import android.content.IntentFilter
+import android.os.IBinder
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
-import com.google.firebase.messaging.RemoteMessage
 
-class MyMessagingService : FirebaseMessagingService() {
+class MyService : Service() {
     private lateinit var notificationManager: NotificationManager
-    companion object {
-        private const val TAG = "FCM"
-        private const val PRIMARY_CHANNEL_ID = "PRIMARY CHANNEL ID"
-    }
-    override fun onNewToken(token: String) {
-        super.onNewToken(token)
-//        FirebaseInstanceId
-        // manually check
-        if(FirebaseMessaging.getInstance().token.result == token)
-            log(FirebaseMessaging.getInstance().token.result)
-        // automatically check with callback
-        FirebaseMessaging.getInstance().token.addOnSuccessListener {
-            // when success, call onSuccess and param is token
-            // will add NotificationManager
-            log(it)
-        }
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
     }
 
-    override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        super.onMessageReceived(remoteMessage)
-//        isRestricted
+    private val receiver = MyReceiver()
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Toast.makeText(this, "Start service", Toast.LENGTH_SHORT).show()
+
+        registerReceiver(receiver, IntentFilter().apply {
+            addAction("android.intent.action.ACTION_SHUTDOWN")
+            addAction("android.intent.action.AIRPLANE_MODE")
+        })
+
         createNotificationChannel()
-        remoteMessage.notification?.let {
-            getNotificationBuilder(it.title!!, it.body!!)
-        }
+        getNotificationBuilder(getString(R.string.app_name), "Start service")
+
+        return START_STICKY
     }
 
-    private fun log(msg: String) = Log.i(TAG, msg)
+    override fun onCreate() {
+        super.onCreate()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Toast.makeText(this, "Stop service", Toast.LENGTH_SHORT).show()
+        unregisterReceiver(receiver)
+    }
 
     private fun createNotificationChannel() {
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         if(android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val notificationChannel = NotificationChannel(
-                PRIMARY_CHANNEL_ID,
-                "Firebase Cloud Messaging",
+                "A",
+                "Test",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 enableLights(true)
                 lightColor = getColor(R.color.purple_500)
                 enableVibration(true)
-                description = "Notification Setting"
+                description = "Notification"
             }
             notificationManager.createNotificationChannel(notificationChannel)
         }
@@ -63,12 +63,12 @@ class MyMessagingService : FirebaseMessagingService() {
     private fun getNotificationBuilder(title: String, text: String) : NotificationCompat.Builder {
         val notificationPendingIntent = PendingIntent.getActivity(
             this,
-            0,
+            1,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        return NotificationCompat.Builder(this, PRIMARY_CHANNEL_ID).apply {
+        return NotificationCompat.Builder(this, "").apply {
             setContentTitle(title)
             setContentText(text)
             setSmallIcon(R.drawable.ic_launcher_foreground)
