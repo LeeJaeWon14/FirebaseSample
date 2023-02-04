@@ -16,6 +16,7 @@ class MyMessagingService : FirebaseMessagingService() {
     companion object {
         private const val TAG = "FCM"
         private const val PRIMARY_CHANNEL_ID = "PRIMARY CHANNEL ID"
+        private const val NOTIFY_ID = 0
     }
     override fun onNewToken(token: String) {
         super.onNewToken(token)
@@ -36,7 +37,10 @@ class MyMessagingService : FirebaseMessagingService() {
 //        isRestricted
         createNotificationChannel()
         remoteMessage.notification?.let {
-            getNotificationBuilder(it.title!!, it.body!!)
+            notificationManager.notify(
+                NOTIFY_ID,
+                getNotificationBuilder(it.title!!, it.body!!).build()
+            )
         }
     }
 
@@ -64,8 +68,8 @@ class MyMessagingService : FirebaseMessagingService() {
         val notificationPendingIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT
+            Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK) },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         return NotificationCompat.Builder(this, PRIMARY_CHANNEL_ID).apply {
